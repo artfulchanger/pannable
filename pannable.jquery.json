@@ -1,0 +1,25 @@
+{
+  "name": "pannable",
+  "title": "Pannable",
+  "description": "jQuery plugin to make an element pannable.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/artfulchanger/pannable",
+  "author": {
+    "name": "Andrea Gentili"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/artfulchanger/pannable"
+  },
+  "bugs": "https://github.com/artfulchanger/pannable/issues",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/artfulchanger/pannable/blob/master/LICENSE-MIT"
+    }
+  ],
+  "dependencies": {
+    "jquery": "*"
+  },
+  "keywords": []
+}
