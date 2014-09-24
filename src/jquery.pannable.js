@@ -73,6 +73,10 @@
 		}
 	}
 
+	var _time;
+
+	var _slidingVelocity;
+
 	function _setupDragging(element, settings) {
 		//
 		var oldPosition;
@@ -149,6 +153,10 @@
 				items.css("left", "+=" + shift.x + "px");
 				items.css("top", "+=" + shift.y + "px");
 
+				// Update time
+				_time = performance.now() ;
+
+				// Update position
 				oldPosition = position;
 			});
 
@@ -160,16 +168,88 @@
 			isDragging = false;
 			$(window).unbind("mousemove");
 
+			position = { x: event.pageX, y: event.pageY };
+
 			// Fire event
 		    settings.onPanningFinished.call(this);
 
 		    // Apply inertia
-		    if (settings.inertia == "on") {
-		    	asdasdasdsd
+		    if (settings.friction != Infinity && settings.friction > 0) {
+		    	var elapsedTime = performance.now() - _time;
+
+		    	var distance = {x: (position.x - oldPosition.x), y: position.y - oldPosition.y}
+
+		    	// Compute and clip sliding velocity
+		    	_slidingVelocity = {x: distance.x / elapsedTime, y: distance.y / elapsedTime};
+
+		    	var max = 1;
+		    	var n = norm(_slidingVelocity);
+		    	if (n > max)
+		    		_slidingVelocity = scale(_slidingVelocity, 1 / n);
+
+				// Update time
+				_time = performance.now();
+
+				// Start the animation.
+				requestAnimationFrame(_slide);		    	
 		    }
-		});		
+		});	
+
+		function norm(vector) {
+			return Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+		}
+
+		function scale(vector, scale) {
+			return {x: vector.x * scale, y: vector.y * scale };
+		}
+
+		function dampAxis(value, elapsedTime) {
+			if (value > 0) {
+				value -= settings.friction * elapsedTime;
+				if (value < 0) value = 0;
+			} else if (value < 0) {
+				value += settings.friction * elapsedTime;
+				if (value > 0) value = 0;
+			}
+			return value;
+		}
+
+		function damp(vector, elapsedTime) {
+			return { x: dampAxis(vector.x, elapsedTime), y: dampAxis(vector.y, elapsedTime)};
+		}
+
+		// Animate
+		function _slide(highResTimestamp) {
+			var id = requestAnimationFrame(_slide);
+
+			var elapsedTime = highResTimestamp - _time;
+		
+			_slidingVelocity = damp(_slidingVelocity, elapsedTime);
+
+			var shift = {x: (_slidingVelocity.x * elapsedTime), y: (_slidingVelocity.y * elapsedTime)};
+
+			if (settings.background && element.data("backgroundImage")) {
+				element.css("background-position-x", "+=" + shift.x + "px");
+				element.css("background-position-y", "+=" + shift.y + "px");
+			}
+
+			var items = element.find(settings.selector);
+			items.css("left", "+=" + shift.x + "px");
+			items.css("top", "+=" + shift.y + "px");
+
+			// Update timestamp
+			_time = highResTimestamp;
+
+			if (norm(_slidingVelocity) < 0.1)
+				cancelAnimationFrame(id);
+		}
 	}
-INERT
+
+
+
+
+
+
 	// Collection method.
 	$.fn.pannable = function(action, options) {
 
@@ -206,13 +286,46 @@ $.fn.pannable.defaults = {
     background: true,
     selector:  "*",
     axis:       "",
-    inertia:    "",
+    friction:    Infinity,
     limit:      "",
     onPanningStarted : function() {},
     onPanningFinished : function() {},
 
     // ... rest of settings ...
 };
+
+$.fn.pannable.friction = {
+	infinite: 600,
+	high: 200,
+	low: 200,
+	_default: "infinite"
+};
+
+
+/*
+
+
+jQuery.fx.speeds = {
+	slow: 600,
+	fast: 200,
+	// Default speed
+	_default: 400
+};
+
+jQuery.speed = function( speed, easing, fn ) {
+	var opt = speed && typeof speed === "object" ? jQuery.extend( {}, speed ) : {
+		complete: fn || !fn && easing ||
+			jQuery.isFunction( speed ) && speed,
+		duration: speed,
+		easing: fn && easing || easing && !jQuery.isFunction( easing ) && easing
+	};
+
+	opt.duration = jQuery.fx.off ? 0 : typeof opt.duration === "number" ? opt.duration :
+		opt.duration in jQuery.fx.speeds ? jQuery.fx.speeds[ opt.duration ] : jQuery.fx.speeds._default;
+
+
+*/
+
 
 
 // Helper functions

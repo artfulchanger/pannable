@@ -12,7 +12,8 @@ $(document).ready(function() {
 	});	
 
 	$("div.pannable.selector").pannable("init", {
-		selector: "div:contains('El2')"
+		selector: "div:contains('El2')",
+		friction:  0.005100
 	});	
 
 	$("div.pannable.axis").pannable("init", {
