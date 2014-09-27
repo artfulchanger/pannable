@@ -174,7 +174,8 @@
 		    settings.onPanningFinished.call(this);
 
 		    // Apply inertia
-		    if (settings.friction != Infinity && settings.friction > 0) {
+		    if (settings.friction == Infinity) {
+		    } else if ($.isNumeric(settings.friction) && settings.friction > 0) {
 		    	var elapsedTime = performance.now() - _time;
 
 		    	var distance = {x: (position.x - oldPosition.x), y: position.y - oldPosition.y}
@@ -192,6 +193,8 @@
 
 				// Start the animation.
 				requestAnimationFrame(_slide);		    	
+		    } else {
+
 		    }
 		});	
 
@@ -225,6 +228,10 @@
 			var elapsedTime = highResTimestamp - _time;
 		
 			_slidingVelocity = damp(_slidingVelocity, elapsedTime);
+
+//			_slidingVelocity = scale(_slidingVelocity, (1 - 1/0.1 * elapsedTime / 1000));
+
+			//console.log("elapsedTime: " + elapsedTime + ", _slidingVelocity.y: " + _slidingVelocity.y);
 
 			var shift = {x: (_slidingVelocity.x * elapsedTime), y: (_slidingVelocity.y * elapsedTime)};
 
