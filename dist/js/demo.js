@@ -2,29 +2,29 @@ $(document).ready(function() {
 
 //	$("div.pannable").pannable();
 
-	$("div.pannable.events").pannable("init", {
+	$("div.pannable.events").pannable({
 		onPanningStarted: function() { console.log("start"); }, 
 		onPanningFinished: function() { console.log("finish"); }
 	});	
 
-	$("div.pannable.nobackground").pannable("init", {
+	$("div.pannable.nobackground").pannable({
 		background: false
 	});	
 
-	$("div.pannable.selector").pannable("init", {
+	$("div.pannable.selector").pannable({
 		selector: "div:contains('El2')",
 		friction:  0.005100
 	});	
 
-	$("div.pannable.axis").pannable("init", {
+	$("div.pannable.axis").pannable({
 		axis: "x"
 	});	
 	
-	$("div.pannable.inside").pannable("init", {
+	$("div.pannable.inside").pannable({
 		limit: "inside"
 	});	
 
-	$("div.pannable.covering").pannable("init", {
+	$("div.pannable.covering").pannable({
 		limit: "covering"
 	});	
 	
