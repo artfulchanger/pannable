@@ -10,36 +10,16 @@ var Pannable = {
 		this.elem  = elem;
 		this.$elem = $(elem);
 
-		// Build the DOM's initial structure
-		this._build();
-
+		// Start aynchronous tasks
 		if (this.options.background)
 			_loadBackgroundImage(this.$elem);
 
-		this._setupDragging(this.$elem, this.options);
+		// Initialize plugin
+		this._setupDragging();
 
-		// return this so that we can chain and use the bridge with less code.
+		// Return this so that we can chain
 		return this;
 	},
-
-	options: {
-		name: "No name"
-	},
-
-	_build: function(){
-		//this.$elem.html('<h1>'+this.options.name+'</h1>');
-	},
-
-	myMethod: function( msg ){
-		// You have direct access to the associated and cached
-		// jQuery element
-		// this.$elem.append('<p>'+msg+'</p>');
-	},
-
-	_isDragging : false,
-	_time : 0,
-	_slidingVelocity : {x: 0, y: 0},
-	_oldPosition : {x: 0, y: 0},
 
 	options : {
 	    background: true,
@@ -51,13 +31,30 @@ var Pannable = {
 	    onPanningFinished : function() {}
 	},
 
-	_setupDragging: function(element, options) {
+	// True while dragging, false otherwise
+	_isDragging : false,
+	// 
+	_time : 0,
+	//
+	_slidingVelocity : {x: 0, y: 0},
+	//
+	_oldPosition : {x: 0, y: 0},
+
+	_setupDragging: function() {
+		var element = this.$elem;
+		var options = this.options;
+
+		var that = this;
+
 		// We're initializing, no dragging is possible yet
-		_isDragging = false;
+		that._isDragging = false;
 
 		// On mouse down
 		element.on('mousedown touchstart', function(event) {
 			event.preventDefault();
+
+		    // Save which element we're dragging
+		    that._isDragging = element;
 
 			_oldPosition = { x: event.pageX, y: event.pageY };
 
@@ -66,12 +63,13 @@ var Pannable = {
 
 			// Listen to mouse motion      
 			$(window).mousemove(function(event) {
-				_isDragging = true;
-
+				// Update position
 				position = { x: event.pageX, y: event.pageY };
 
+				// Compute mouse shift
 				shift = { x: position.x - _oldPosition.x, y: position.y - _oldPosition.y };
 				
+				// Apply bounds, if any
 				if (options.axis == "x")
 					shift.y = 0;
 				if (options.axis == "y")
@@ -125,7 +123,7 @@ var Pannable = {
 				items.css("top", "+=" + shift.y + "px");
 
 				// Update time
-				this._time = performance.now() ;
+				this._time = performance.now();
 
 				// Update position
 				_oldPosition = position;
@@ -134,8 +132,13 @@ var Pannable = {
 		});		
 
 		// On mouse up
-		element.on('mouseup touchend', function(e) {
-			_isDragging = false;
+		$(window).on('mouseup touchend', function(e) {
+			var element = that.element;
+			var options = that.options;
+
+			if (!that._isDragging)
+				return;
+
 			$(window).unbind("mousemove");
 
 			position = { x: event.pageX, y: event.pageY };
@@ -166,6 +169,8 @@ var Pannable = {
 		    } else {
 
 		    }
+
+			that._isDragging = false;		    
 		});	
 
 		function norm(vector) {
