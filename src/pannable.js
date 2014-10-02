@@ -56,7 +56,7 @@ var Pannable = {
 		    // Save which element we're dragging
 		    that._isDragging = element;
 
-			_oldPosition = { x: event.pageX, y: event.pageY };
+			that._oldPosition = { x: event.pageX, y: event.pageY };
 
 			// Fire event
 		    options.onPanningStarted.call(this);
@@ -67,7 +67,7 @@ var Pannable = {
 				position = { x: event.pageX, y: event.pageY };
 
 				// Compute mouse shift
-				shift = { x: position.x - _oldPosition.x, y: position.y - _oldPosition.y };
+				shift = { x: position.x - that._oldPosition.x, y: position.y - that._oldPosition.y };
 				
 				// Apply bounds, if any
 				if (options.axis == "x")
@@ -125,8 +125,15 @@ var Pannable = {
 				// Update time
 				this._time = performance.now();
 
+		    	// Compute and clip sliding velocity
+		    	var elapsedTime = performance.now() - that._time;
+
+		    	var distance = {x: (position.x - that._oldPosition.x), y: position.y - that._oldPosition.y}
+
+		    	that._slidingVelocity = {x: distance.x / elapsedTime, y: distance.y / elapsedTime};
+
 				// Update position
-				_oldPosition = position;
+				that._oldPosition = position;
 			});
 
 		});		
@@ -144,28 +151,22 @@ var Pannable = {
 			position = { x: event.pageX, y: event.pageY };
 
 			// Fire event
-		    options.onPanningFinished.call(this);
+		    options.onPanningFinished.call(that);
 
 		    // Apply inertia
 		    if (options.friction == Infinity) {
 		    } else if ($.isNumeric(options.friction) && options.friction > 0) {
-		    	var elapsedTime = performance.now() - this._time;
-
-		    	var distance = {x: (position.x - _oldPosition.x), y: position.y - _oldPosition.y}
-
-		    	// Compute and clip sliding velocity
-		    	this._slidingVelocity = {x: distance.x / elapsedTime, y: distance.y / elapsedTime};
-
-		    	var max = 1;
-		    	var n = norm(this._slidingVelocity);
+		    	var max = 0.5;
+		    	var n = norm(that._slidingVelocity);
+		    	console.log(norm(that._slidingVelocity));
 		    	if (n > max)
-		    		this._slidingVelocity = scale(this._slidingVelocity, 1 / n);
+	    			that._slidingVelocity = scale(that._slidingVelocity, max / n);
 
 				// Update time
-				this._time = performance.now();
+				that._time = performance.now();
 
 				// Start the animation.
-				requestAnimationFrame(_slide);		    	
+				requestAnimationFrame(_slide);
 		    } else {
 
 		    }
@@ -181,34 +182,34 @@ var Pannable = {
 			return {x: vector.x * scale, y: vector.y * scale };
 		}
 
-		function dampAxis(value, elapsedTime) {
+		function dampAxis(value, elapsedTime, friction) {
 			if (value > 0) {
-				value -= options.friction * elapsedTime;
+				value -= friction * (elapsedTime / 1000);
 				if (value < 0) value = 0;
 			} else if (value < 0) {
-				value += options.friction * elapsedTime;
+				value += friction * (elapsedTime / 1000);
 				if (value > 0) value = 0;
 			}
 			return value;
 		}
 
-		function damp(vector, elapsedTime) {
-			return { x: dampAxis(vector.x, elapsedTime), y: dampAxis(vector.y, elapsedTime)};
+		function damp(vector, elapsedTime, friction) {
+			return { x: dampAxis(vector.x, elapsedTime, friction), y: dampAxis(vector.y, elapsedTime, friction)};
 		}
 
 		// Animate
 		function _slide(highResTimestamp) {
 			var id = requestAnimationFrame(_slide);
 
-			var elapsedTime = highResTimestamp - this._time;
+			var elapsedTime = highResTimestamp - that._time;
 		
-			this._slidingVelocity = damp(this._slidingVelocity, elapsedTime);
+//			that._slidingVelocity = damp(that._slidingVelocity, elapsedTime, that.options.friction);
 
-//			this._slidingVelocity = scale(this._slidingVelocity, (1 - 1/0.1 * elapsedTime / 1000));
+			that._slidingVelocity = scale(that._slidingVelocity, (1 - that.options.friction * (elapsedTime / 1000)));
 
-			//console.log("elapsedTime: " + elapsedTime + ", this._slidingVelocity.y: " + this._slidingVelocity.y);
+			//console.log("elapsedTime: " + elapsedTime + ", that._slidingVelocity.y: " + that._slidingVelocity.y);
 
-			var shift = {x: (this._slidingVelocity.x * elapsedTime), y: (this._slidingVelocity.y * elapsedTime)};
+			var shift = {x: (that._slidingVelocity.x * elapsedTime), y: (that._slidingVelocity.y * elapsedTime)};
 
 			if (options.background && element.data("backgroundImage")) {
 				element.css("background-position-x", "+=" + shift.x + "px");
@@ -220,10 +221,12 @@ var Pannable = {
 			items.css("top", "+=" + shift.y + "px");
 
 			// Update timestamp
-			this._time = highResTimestamp;
+			that._time = highResTimestamp;
 
-			if (norm(this._slidingVelocity) < 0.1)
+			if (norm(that._slidingVelocity) < 0.000001) {
+				console.log("end");
 				cancelAnimationFrame(id);
+			}
 		}
 	}
 
