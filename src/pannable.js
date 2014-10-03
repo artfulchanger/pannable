@@ -25,10 +25,11 @@ var Pannable = {
 	    background: true,
 	    selector:  "*",
 	    axis:       "",
-	    friction:    Infinity,
 	    limit:      "",
 	    onPanningStarted : function() {},
-	    onPanningFinished : function() {}
+	    onPanningFinished : function() {},
+	    layers : {},
+	    timeToRest : 0
 	},
 
 	// True while dragging, false otherwise
@@ -41,7 +42,6 @@ var Pannable = {
 	_oldPosition : {x: 0, y: 0},
 
 	_setupDragging: function() {
-		var element = this.$elem;
 		var options = this.options;
 
 		var that = this;
@@ -50,19 +50,22 @@ var Pannable = {
 		that._isDragging = false;
 
 		// On mouse down
-		element.on('mousedown touchstart', function(event) {
+		this.$elem.on('mousedown touchstart', function(event) {
 			event.preventDefault();
 
-		    // Save which element we're dragging
-		    that._isDragging = element;
-
+		    // Initialize position and time
 			that._oldPosition = { x: event.pageX, y: event.pageY };
+			that._time = performance.now();
 
 			// Fire event
 		    options.onPanningStarted.call(this);
 
 			// Listen to mouse motion      
 			$(window).mousemove(function(event) {
+
+				// Save which element we're dragging
+				that._isDragging = that.$elem;
+
 				// Update position
 				position = { x: event.pageX, y: event.pageY };
 
@@ -75,16 +78,16 @@ var Pannable = {
 				if (options.axis == "y")
 					shift.x = 0;
 
-				if (options.background && element.data("backgroundImage")) {
-					bg = { x: parseInt(element.css("background-position-x")), y: parseInt(element.css("background-position-y")) };
+				if (options.background && that.$elem.data("backgroundImage")) {
+					bg = { x: parseInt(that.$elem.css("background-position-x")), y: parseInt(that.$elem.css("background-position-y")) };
 
 
-					var x0 = parseInt(element.css("background-position-x"));
-					var y0 = parseInt(element.css("background-position-y"));
+					var x0 = parseInt(that.$elem.css("background-position-x"));
+					var y0 = parseInt(that.$elem.css("background-position-y"));
 					var x = x0 + shift.x;
 					var y = y0 + shift.y;
 					// Determine the size of pannable component
-					var elementSize = { width: element.width(), height: element.height()};
+					var elementSize = { width: that.$elem.width(), height: that.$elem.height()};
 
 					switch (options.limit) {
 						case "inside":
@@ -92,10 +95,10 @@ var Pannable = {
 								shift.x = -x0;
 							if (y < 0)
 								shift.y = -y0;
-							if (x + element.data("backgroundImage").width > elementSize.width)
-								shift.x = -x0 + elementSize.width - element.data("backgroundImage").width;
-							if (y + element.data("backgroundImage").height > elementSize.height)
-								shift.y = -y0 + elementSize.height - element.data("backgroundImage").height;
+							if (x + that.$elem.data("backgroundImage").width > elementSize.width)
+								shift.x = -x0 + elementSize.width - that.$elem.data("backgroundImage").width;
+							if (y + that.$elem.data("backgroundImage").height > elementSize.height)
+								shift.y = -y0 + elementSize.height - that.$elem.data("backgroundImage").height;
 							break;
 						case "covering":
 							// Image must always cover the background
@@ -103,131 +106,72 @@ var Pannable = {
 								shift.x = -x0;
 							if (y > 0)
 								shift.y = -y0;
-							if (x + element.data("backgroundImage").width < elementSize.width)
-								shift.x = -x0 + elementSize.width - element.data("backgroundImage").width;
-							if (y + element.data("backgroundImage").height < elementSize.height)
-								shift.y = -y0 + elementSize.height - element.data("backgroundImage").height;
+							if (x + that.$elem.data("backgroundImage").width < elementSize.width)
+								shift.x = -x0 + elementSize.width - that.$elem.data("backgroundImage").width;
+							if (y + that.$elem.data("backgroundImage").height < elementSize.height)
+								shift.y = -y0 + elementSize.height - that.$elem.data("backgroundImage").height;
 							break;
 						default:
 							// Do nothing
 							break;
 					}
 
-					element.css("background-position-x", "+=" + shift.x + "px");
-					element.css("background-position-y", "+=" + shift.y + "px");
+					that.$elem.css("background-position-x", "+=" + shift.x + "px");
+					that.$elem.css("background-position-y", "+=" + shift.y + "px");
 
 				}
 
-				var items = element.find(options.selector);
+				var items = that.$elem.find(options.selector);
 				items.css("left", "+=" + shift.x + "px");
 				items.css("top", "+=" + shift.y + "px");
 
-				// Update time
-				this._time = performance.now();
-
-		    	// Compute and clip sliding velocity
+		    	// Compute sliding velocity
 		    	var elapsedTime = performance.now() - that._time;
-
 		    	var distance = {x: (position.x - that._oldPosition.x), y: position.y - that._oldPosition.y}
-
 		    	that._slidingVelocity = {x: distance.x / elapsedTime, y: distance.y / elapsedTime};
 
 				// Update position
 				that._oldPosition = position;
+
+				// Update time
+				that._time = performance.now();
 			});
 
 		});		
 
+
+
 		// On mouse up
 		$(window).on('mouseup touchend', function(e) {
-			var element = that.element;
 			var options = that.options;
-
-			if (!that._isDragging)
-				return;
 
 			$(window).unbind("mousemove");
 
-			position = { x: event.pageX, y: event.pageY };
+			if (!that._isDragging)
+				return;
 
 			// Fire event
 		    options.onPanningFinished.call(that);
 
 		    // Apply inertia
-		    if (options.friction == Infinity) {
-		    } else if ($.isNumeric(options.friction) && options.friction > 0) {
-		    	var max = 0.5;
-		    	var n = norm(that._slidingVelocity);
-		    	console.log(norm(that._slidingVelocity));
-		    	if (n > max)
-	    			that._slidingVelocity = scale(that._slidingVelocity, max / n);
+		    if (options.timeToRest > 0) {
 
-				// Update time
-				that._time = performance.now();
-
-				// Start the animation.
-				requestAnimationFrame(_slide);
-		    } else {
-
+				var items = that.$elem.find(options.selector);
+				var shift = {x: that._slidingVelocity.x * options.timeToRest / 2, y : that._slidingVelocity.y * options.timeToRest  / 2};
+				
+				items.stop(true, false);
+				items
+					.animate({"left" : "+=" + shift.x + "px"}, { queue : false, easing : "easeOutCubic", duration : options.timeToRest })
+					.animate({"top" : "+=" + shift.y + "px"}, { queue : false, easing : "easeOutCubic", duration : options.timeToRest })
+				that.$elem.stop(true, false);
+				that.$elem
+					.animate({"background-position-x" : "+=" + shift.x + "px"}, { queue : false, easing : "easeOutCubic", duration : options.timeToRest })
+					.animate({"background-position-y" : "+=" + shift.y + "px"}, { queue : false, easing : "easeOutCubic", duration : options.timeToRest })
 		    }
 
 			that._isDragging = false;		    
 		});	
 
-		function norm(vector) {
-			return Math.sqrt(vector.x * vector.x + vector.y * vector.y);
-		}
-
-		function scale(vector, scale) {
-			return {x: vector.x * scale, y: vector.y * scale };
-		}
-
-		function dampAxis(value, elapsedTime, friction) {
-			if (value > 0) {
-				value -= friction * (elapsedTime / 1000);
-				if (value < 0) value = 0;
-			} else if (value < 0) {
-				value += friction * (elapsedTime / 1000);
-				if (value > 0) value = 0;
-			}
-			return value;
-		}
-
-		function damp(vector, elapsedTime, friction) {
-			return { x: dampAxis(vector.x, elapsedTime, friction), y: dampAxis(vector.y, elapsedTime, friction)};
-		}
-
-		// Animate
-		function _slide(highResTimestamp) {
-			var id = requestAnimationFrame(_slide);
-
-			var elapsedTime = highResTimestamp - that._time;
-		
-//			that._slidingVelocity = damp(that._slidingVelocity, elapsedTime, that.options.friction);
-
-			that._slidingVelocity = scale(that._slidingVelocity, (1 - that.options.friction * (elapsedTime / 1000)));
-
-			//console.log("elapsedTime: " + elapsedTime + ", that._slidingVelocity.y: " + that._slidingVelocity.y);
-
-			var shift = {x: (that._slidingVelocity.x * elapsedTime), y: (that._slidingVelocity.y * elapsedTime)};
-
-			if (options.background && element.data("backgroundImage")) {
-				element.css("background-position-x", "+=" + shift.x + "px");
-				element.css("background-position-y", "+=" + shift.y + "px");
-			}
-
-			var items = element.find(options.selector);
-			items.css("left", "+=" + shift.x + "px");
-			items.css("top", "+=" + shift.y + "px");
-
-			// Update timestamp
-			that._time = highResTimestamp;
-
-			if (norm(that._slidingVelocity) < 0.000001) {
-				console.log("end");
-				cancelAnimationFrame(id);
-			}
-		}
 	}
 
 };
