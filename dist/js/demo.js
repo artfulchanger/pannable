@@ -4,7 +4,8 @@ $(document).ready(function() {
 
 	$("div.pannable.events").pannable({
 		onPanningStarted: function() { console.log("start"); }, 
-		onPanningFinished: function() { console.log("finish"); }
+		onPanningFinished: function() { console.log("finish"); },
+		elastic: true
 	});	
 
 	$("div.pannable.nobackground").pannable({
@@ -12,8 +13,7 @@ $(document).ready(function() {
 	});	
 
 	$("div.pannable.selector").pannable({
-		selector: "div:contains('El2')",
-		timeToRest:  400
+		selector: "div:contains('El2')"
 	});	
 
 	$("div.pannable.axis").pannable({
@@ -21,13 +21,15 @@ $(document).ready(function() {
 	});	
 	
 	$("div.pannable.inside").pannable({
-		limit: "inside"
+		limit: "inside",
+		timeToRest:  400,
+		layers: {first : 1, second: 1.2, third: 1.4 }
 	});	
 
 	$("div.pannable.covering").pannable({
 		limit: "covering"
 	});	
 	
-	$("div.pannable").html("<div class='additional-elements'>El1</div> <div class='additional-elements'>El2</div> <div class='additional-elements'>El3</div>");
+	$("div.pannable").html("<div class='additional-elements' data-layer='first'>El1</div> <div class='additional-elements' data-layer='second'>El2</div> <div class='additional-elements' data-layer='third'>El3</div>");
 
 });
